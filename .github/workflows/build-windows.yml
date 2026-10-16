@@ -1,0 +1,59 @@
+name: Build Windows x64
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    name: Build Windows x64 Installer
+    runs-on: windows-2022
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enable long paths on Windows
+        shell: pwsh
+        run: git config --global core.longpaths true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.4.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Install dependencies
+        shell: bash
+        run: pnpm --filter @omnirush/desktop... --filter @omnirush/app... --filter omnirush-server... --filter omnirush-ui-mcp... install --frozen-lockfile --prefer-offline
+
+      - name: Build desktop application
+        env:
+          TARGET: x86_64-pc-windows-msvc
+        shell: bash
+        run: pnpm --filter @omnirush/desktop build:electron
+
+      - name: Package Windows NSIS installer
+        shell: bash
+        run: |
+          pnpm --dir apps/desktop exec electron-builder \
+            --config electron-builder.yml \
+            --win --x64 \
+            --publish never
+
+      - name: Upload Windows Installer (.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: omnirush-windows-x64-installer
+          path: apps/desktop/dist-electron/*.exe
