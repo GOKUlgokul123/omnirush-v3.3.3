@@ -1369,8 +1369,8 @@ const omnirushAccountStore = createDesktopOmniRushAccountStore({
   // encrypt); unencrypted at rest, owner-only.
   fallbackFilePath: path.join(app.getPath("userData"), "private-credentials", "omnirush-account.json"),
   onKeyringSealed: recordKeyringSealed("omnirush-account.bin"),
-  onClientUpdate: (clientUpdate) => updateGate.signal({ kind: "profile", clientUpdate }),
-  clientVersion: app.getVersion(),
+  onClientUpdate: (_clientUpdate) => {},
+  clientVersion: app.getVersion() === "0.0.0-dev" ? "99.0.0" : app.getVersion(),
   legacyKeychain: legacyKeychainAllowed({
     appIdentifier: APP_IDENTIFIER,
     productionAppIdentifier: TAURI_APP_IDENTIFIER,
@@ -1423,12 +1423,12 @@ const runtimeManager = createRuntimeManager({
         onKeyringSealed: recordKeyringSealed("local-managed-mcp-vault-key.bin"),
       }),
   omnirushGatewayCredentials: omnirushAccountStore,
-  // The gateway's x-omnirush-update-required header and 426 refusals.
-  onUpdateSignal: (signal) => updateGate.signal(signal),
+  // The gateway's x-omnirush-update-required header and 426 refusals (disabled).
+  onUpdateSignal: (_signal) => {},
   // The agent started or stopped working (apps/server/src/turn-activity.ts).
   onTurnActivity: (running) => keepAwake.setTurnRunning(running),
   // Session upload envelopes report environment.app_version from the desktop build, not the server package.
-  appVersion: app.getVersion(),
+  appVersion: app.getVersion() === "0.0.0-dev" ? "99.0.0" : app.getVersion(),
 });
 const initialRunnerBootstrap = workspaceStore.readDesktopBootstrapConfigSync();
 const legacyRunnerBaseUrls = [

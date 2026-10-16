@@ -1,7 +1,7 @@
 {
   "name": "@omnirush/app",
   "private": true,
-  "version": "0.0.0-dev",
+  "version": "3.5.1",
   "type": "module",
   "scripts": {
     "test": "bun test --isolate tests/",

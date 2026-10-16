@@ -1444,48 +1444,8 @@ export function registerUpdaterIpc({
    * Never rejects.
    */
   async function prepareInstallOnQuit() {
-    try {
-      const updater = autoUpdaterInstance;
-      if (!updater || !updateDownloaded || installTriggered) return null;
-      const installMode = await resolveInstallMode();
-      if (installMode !== "in-place" && installMode !== "appimage" && installMode !== "mac-swap") return null;
-      // Quitting never asks for a password: an /Applications this user cannot
-      // write waits for "Restart to update".
-      if (installMode === "mac-swap" && !(await canReplace(installTarget))) return null;
-      // Squirrel would refuse it (DMG, App Translocation); the next launch asks to move.
-      if (installMode === "in-place" && (await macBundleBlockingUpdate())) return null;
-      const newest = await withTimeout(
-        queueUpdaterOperation(() => ensureNewestDownloaded(updater, installMode)),
-        quitUpdateTimeoutMs,
-        "The quit-time update refresh",
-      );
-      if (!newest.ok || !updateDownloaded || installTriggered) return null;
-      if (installMode === "appimage" || installMode === "mac-swap") {
-        return () => {
-          installTriggered = true;
-          void selfInstall(installMode, { relaunch: false })
-            .catch((error) => console.warn("[updater] install on quit failed", error?.message ?? error))
-            .finally(() => quitApp());
-        };
-      }
-      return () => {
-        installTriggered = true;
-        quitInstallInProgress = true;
-        // Quit means quit: install silently without relaunching.
-        updater.autoRunAppAfterInstall = false;
-        setTimeout(() => quitApp(), quitInstallFallbackMs);
-        try {
-          allowQuit();
-          updater.quitAndInstall(true, false);
-        } catch (error) {
-          console.warn("[updater] install on quit failed", error?.message ?? error);
-          quitApp();
-        }
-      };
-    } catch (error) {
-      console.warn("[updater] could not prepare the update for quit", error?.message ?? error);
-      return null;
-    }
+    // Auto-update install on quit is disabled.
+    return null;
   }
 
   /**

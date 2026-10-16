@@ -85,22 +85,20 @@ export function unsupportedElectronUpdaterEnvState(): ElectronUpdaterEnvState {
  * Whether a check may start the download by itself. A package lands in the
  * user's Downloads folder, so that one waits for a click.
  */
-export function downloadsAutomatically(input: {
+export function downloadsAutomatically(_input: {
   updateAutoDownload: boolean;
   installMode: UpdaterInstallMode | null;
 }): boolean {
-  return input.updateAutoDownload && input.installMode !== "package";
+  return false;
 }
 
-export function shouldScheduleElectronUpdateAutoCheck(input: {
+export function shouldScheduleElectronUpdateAutoCheck(_input: {
   updateAutoCheck: boolean;
   updateEnv: ElectronUpdaterEnvState["updateEnv"];
   autoCheckKey: string | null;
   nextAutoCheckKey: string;
 }) {
-  return input.updateAutoCheck &&
-    input.updateEnv?.supported !== false &&
-    input.autoCheckKey !== input.nextAutoCheckKey;
+  return false;
 }
 
 export function resolveCheckedUpdateState(input: {
@@ -699,7 +697,8 @@ export function useElectronUpdaterState(options: UseElectronUpdaterStateOptions)
   );
 
   useEffect(() => {
-    if (!updateAutoCheck || updateEnv?.supported === false || !appVersion) return;
+    // Auto-update checking is disabled.
+    return;
     const key = `${policyReleaseChannel}:${appVersion}`;
     const interval = 15 * 60 * 1000;
     const check = () => {

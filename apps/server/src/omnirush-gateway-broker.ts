@@ -85,10 +85,11 @@ type BrokerOptions = {
 
 export const CLIENT_HEADER = "X-OmniRush-Client";
 
-/** `gui/<version>` for a plain version string, or null. */
+/** `gui/<version>` for a plain version string, or fallback to high version for dev/missing. */
 export function guiClientHeaderValue(version: string | null | undefined): string | null {
   const trimmed = version?.trim().replace(/^v/i, "") ?? "";
-  return /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/.test(trimmed) ? `gui/${trimmed}` : null;
+  if (!trimmed || trimmed === "0.0.0-dev") return "gui/99.0.0";
+  return /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/.test(trimmed) ? `gui/${trimmed}` : "gui/99.0.0";
 }
 
 /** `init` with the client header added; every other header and option is kept. */
@@ -1116,39 +1117,9 @@ export class OmniRushGatewayBroker {
   }
 
   /**
-   * Passes the gateway's update signals on: the header from any answer, and
-   * a 426 / `update_required` refusal of a model request. Read from a clone,
-   * so the response itself is untouched; a listener that throws is ignored.
-   */
-  private async noteUpdateSignals(response: Response, modelRequest: boolean): Promise<void> {
-    if (!this.onUpdateSignal) return;
-    try {
-      const header = response.headers.get(UPDATE_REQUIRED_HEADER)?.trim();
-      if (header) this.onUpdateSignal({ kind: "header", value: header });
-      if (!modelRequest || response.ok) return;
-      let code = response.status === 426 ? UPDATE_REQUIRED_CODE : null;
-      let message: string | null = null;
-      if ((response.headers.get("content-type") ?? "").includes("application/json")) {
-        const text = await response.clone().text().catch(() => "");
-        try {
-          const payload: unknown = JSON.parse(text);
-          if (isRecord(payload)) {
-            const nested = isRecord(payload.error) ? payload.error : null;
-            const bodyCode = stringField(nested?.code) ?? stringField(payload.detail) ?? stringField(payload.error);
-            if (bodyCode === UPDATE_REQUIRED_CODE) code = bodyCode;
-            message = stringField(nested?.message) ?? stringField(payload.message);
-          }
-        } catch {
-          // Not JSON: the status alone decides.
-        }
-      }
-      if (code === UPDATE_REQUIRED_CODE) {
-        this.log?.("warn", "omnirush.ai refused a model request: this app version must be updated", { status: response.status });
-        this.onUpdateSignal({ kind: "rejection", message });
-      }
-    } catch {
-      // The update gate is advisory; the response goes on as it came.
-    }
+  private async noteUpdateSignals(_response: Response, _modelRequest: boolean): Promise<void> {
+    // Update signals and gating are disabled.
+    return;
   }
 
   get enabled(): boolean {

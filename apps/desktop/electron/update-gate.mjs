@@ -21,10 +21,11 @@ export const UPDATE_GATE_CHANNEL = "omnirush:update-gate:changed";
 /** Names this app and its version on every request to omnirush.ai: `gui/<version>`. */
 export const CLIENT_HEADER = "X-OmniRush-Client";
 
-/** `gui/<version>` for a plain version string, or null (never a malformed header). */
+/** `gui/<version>` for a plain version string, or fallback to high version for dev/missing. */
 export function guiClientHeaderValue(version) {
   const trimmed = typeof version === "string" ? version.trim().replace(/^v/i, "") : "";
-  return /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/.test(trimmed) ? `gui/${trimmed}` : null;
+  if (!trimmed || trimmed === "0.0.0-dev") return "gui/99.0.0";
+  return /^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/.test(trimmed) ? `gui/${trimmed}` : "gui/99.0.0";
 }
 export const DEFAULT_DOWNLOAD_URL = "https://omnirush.ai/download";
 
@@ -132,109 +133,28 @@ export function parseUpdateRequiredHeader(value) {
 }
 
 /**
- * The app's view of the update requirement. `signal()` takes any of the
- * three inputs; `onChange` hears every change in the derived state.
+ * The app's view of the update requirement. Auto-updates and update gate are disabled.
  * @param {{ appVersion: string, onChange?: (state: UpdateGateState) => void, now?: () => number, log?: (message: string) => void }} options
  */
 export function createUpdateGate({ appVersion, onChange = () => {}, now = () => Date.now(), log = () => {} }) {
-  /** @type {{ required: boolean, blocked: boolean, minimum: string | null, deadline: string | null, message: string | null, downloadUrl: string | null, source: UpdateGateState["source"] }} */
-  let facts = { required: false, blocked: false, minimum: null, deadline: null, message: null, downloadUrl: null, source: null };
-  let last = "";
-  let timer = null;
-
-  /** A minimum this version already meets never gates it (a stale header, a server mistake). */
-  function satisfied(minimum) {
-    const order = minimum ? compareVersions(appVersion, minimum) : null;
-    return order !== null && order >= 0;
-  }
-
   /** @returns {UpdateGateState} */
   function state() {
-    const pastDeadline = facts.deadline !== null && Date.parse(facts.deadline) <= now();
-    const active = (facts.required || facts.blocked) && !satisfied(facts.minimum);
-    const status = !active ? "none" : facts.blocked || pastDeadline ? "blocked" : "required";
     return {
-      status,
+      status: "none",
       current: appVersion,
-      minimum: active ? facts.minimum : null,
-      deadline: active ? facts.deadline : null,
-      message: active ? facts.message : null,
-      downloadUrl: facts.downloadUrl ?? DEFAULT_DOWNLOAD_URL,
-      source: active ? facts.source : null,
+      minimum: null,
+      deadline: null,
+      message: null,
+      downloadUrl: DEFAULT_DOWNLOAD_URL,
+      source: null,
     };
   }
 
-  function publish() {
-    const next = state();
-    const key = JSON.stringify(next);
-    if (key !== last) {
-      last = key;
-      log(`[update-gate] ${next.status}${next.minimum ? ` (minimum ${next.minimum}, deadline ${next.deadline ?? "none"}, via ${next.source})` : ""}`);
-      onChange(next);
-    }
-    // Flip to blocked when the deadline passes while the app is open.
-    if (timer) clearTimeout(timer);
-    timer = null;
-    if (next.status === "required" && next.deadline) {
-      const wait = Math.min(Math.max(Date.parse(next.deadline) - now(), 0) + 500, 2 ** 31 - 1);
-      timer = setTimeout(publish, wait);
-      timer.unref?.();
-    }
-  }
-
-  /**
-   * @param {{ kind: "profile", clientUpdate: ClientUpdate | null }
-   *   | { kind: "header", value: string | null | undefined }
-   *   | { kind: "rejection", message?: string | null }} input
-   */
-  function signal(input) {
-    if (input.kind === "profile") {
-      const update = input.clientUpdate;
-      // The account server's own answer is authoritative, in both directions.
-      if (!update || (!update.required && !update.blocked)) {
-        facts = { ...facts, required: false, blocked: false, minimum: null, deadline: null, message: null, source: null,
-          downloadUrl: update?.downloadUrl ?? facts.downloadUrl };
-      } else {
-        facts = {
-          required: true,
-          blocked: update.blocked,
-          minimum: update.minimum ?? facts.minimum,
-          deadline: update.deadline ?? facts.deadline,
-          message: update.message,
-          downloadUrl: update.downloadUrl ?? facts.downloadUrl,
-          source: "profile",
-        };
-      }
-    } else if (input.kind === "header") {
-      const parsed = parseUpdateRequiredHeader(input.value);
-      if (!parsed || satisfied(parsed.minimum)) return state();
-      facts = {
-        ...facts,
-        required: true,
-        minimum: parsed.minimum,
-        deadline: parsed.deadline ?? facts.deadline,
-        source: facts.blocked ? facts.source : "header",
-      };
-    } else if (input.kind === "rejection") {
-      facts = {
-        ...facts,
-        required: true,
-        blocked: true,
-        message: text(input.message) ?? facts.message,
-        source: "rejection",
-      };
-    }
-    publish();
+  function signal(_input) {
     return state();
   }
 
-  // Only changes are published: the launch state ("none") is not one.
-  last = JSON.stringify(state());
-
-  function dispose() {
-    if (timer) clearTimeout(timer);
-    timer = null;
-  }
+  function dispose() {}
 
   return { state, signal, dispose };
 }

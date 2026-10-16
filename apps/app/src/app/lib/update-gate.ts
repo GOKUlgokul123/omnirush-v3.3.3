@@ -78,9 +78,9 @@ export function updateBannerText(state: UpdateGateState, appName: string, now: n
   return countdown ? `${version} is required in ${countdown}` : `${version} is required`;
 }
 
-/** The chat input stays disabled while the gate blocks model requests. */
-export function chatBlockedByUpdate(state: UpdateGateState): boolean {
-  return state.status === "blocked";
+/** The chat input is never disabled by update gates. */
+export function chatBlockedByUpdate(_state: UpdateGateState): boolean {
+  return false;
 }
 
 export type RequiredUpdateAction =
@@ -202,18 +202,14 @@ export function updateButtonLabel(input: {
   }
 }
 
-/** Whether the background download should start now (self-updating installs only, once per gate). */
-export function shouldStartBackgroundDownload(input: {
+/** Background download is disabled. */
+export function shouldStartBackgroundDownload(_input: {
   gate: UpdateGateState;
   supported: boolean;
   installMode: UpdaterInstallMode | null;
   updaterState: string | null | undefined;
 }): boolean {
-  if (input.gate.status === "none" || !input.supported) return false;
-  // A DMG-only copy cannot replace itself, and a package lands in Downloads:
-  // both wait for a click.
-  if (input.installMode === "manual-dmg" || input.installMode === "package") return false;
-  return !["checking", "downloading", "ready", "installer-opened"].includes(input.updaterState ?? "");
+  return false;
 }
 
 type UpdateGateStore = {
@@ -230,19 +226,12 @@ let subscribed = false;
 
 /** Subscribes the store to the desktop bridge once; safe to call from every mount. */
 export function connectUpdateGate(): void {
-  if (subscribed || typeof window === "undefined") return;
-  subscribed = true;
-  const apply = (value: unknown) => useUpdateGateStore.getState().set(normalizeUpdateGateState(value));
-  window.__omnirushUpdateGateEval = (state) => apply(state ? { ...NO_UPDATE_GATE, ...state } : NO_UPDATE_GATE);
-  const desktop = bridge();
-  if (!desktop) return;
-  desktop.onChange?.(apply);
-  void desktop.get?.().then(apply).catch(() => undefined);
+  // Update gate is disabled.
 }
 
 /** Reads /device/me again through the shell (client_update there is authoritative). */
 export function refreshUpdateGate(): void {
-  void bridge()?.refresh?.().then((value) => useUpdateGateStore.getState().set(normalizeUpdateGateState(value))).catch(() => undefined);
+  // Update gate is disabled.
 }
 
 export function useUpdateGateState(): UpdateGateState {
@@ -251,5 +240,5 @@ export function useUpdateGateState(): UpdateGateState {
 
 /** True while model requests are refused for this version: the composer is disabled. */
 export function useUpdateGateBlocked(): boolean {
-  return useUpdateGateStore((store) => chatBlockedByUpdate(store.state));
+  return false;
 }

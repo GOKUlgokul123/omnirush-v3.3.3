@@ -60,59 +60,7 @@ function useRequiredUpdate(gate: UpdateGateState) {
   const status = updater.updateStatus;
   const updaterState = status?.state ?? null;
   const [installRequested, setInstallRequested] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const backgroundStarted = useRef(false);
-  const downloadRequested = useRef(false);
-
-  useEffect(() => {
-    if (gate.status === "none") {
-      backgroundStarted.current = false;
-      downloadRequested.current = false;
-      return;
-    }
-    if (backgroundStarted.current) return;
-    if (!shouldStartBackgroundDownload({ gate, supported, installMode, updaterState })) return;
-    backgroundStarted.current = true;
-    // A check downloads by itself when automatic downloads are on; the
-    // effect below starts the download when they are off.
-    void updater.checkForUpdates();
-  }, [gate, installMode, supported, updater, updaterState]);
-
-  useEffect(() => {
-    if (gate.status === "none" || installMode !== "in-place") return;
-    if (updaterState === "available" && !downloadRequested.current) {
-      downloadRequested.current = true;
-      void updater.downloadUpdate();
-    }
-  }, [gate.status, installMode, updater, updaterState]);
-
-  // After "Update now": restart once the download is ready. A failure ends
-  // the request; the detail line says what went wrong and the button retries.
-  const installDownloadStarted = useRef(false);
-  useEffect(() => {
-    if (!installRequested) return;
-    const finish = (next?: () => void) => {
-      setInstallRequested(false);
-      installDownloadStarted.current = false;
-      next?.();
-    };
-    if (updaterState === "ready") {
-      return finish(installMode === "in-place" ? () => void updater.installUpdateAndRestart() : undefined);
-    }
-    if (updaterState === "available" && !installDownloadStarted.current) {
-      installDownloadStarted.current = true;
-      void updater.downloadUpdate();
-      return;
-    }
-    // "idle" after a check: the feed has nothing newer, so nothing will
-    // download. Ending the request here keeps the button from waiting forever.
-    if (
-      updaterState === "error"
-      || updaterState === "blocked"
-      || updaterState === "installer-opened"
-      || (updaterState === "idle" && status?.lastCheckedAt)
-    ) finish();
-  }, [installMode, installRequested, status?.lastCheckedAt, updater, updaterState]);
+  // Auto-update background checks and downloads are disabled.
 
   const unreachable = requiredUpdateUnreachable({
     gate,
@@ -290,35 +238,5 @@ export function UpdateRequiredView(props: { gate: UpdateGateState; appName: stri
  * Session uploads run in the Electron main process and are not touched.
  */
 export function UpdateGate({ children }: { children: ReactNode }) {
-  const gate = useUpdateGateState();
-  // The product name as the release names it, unless an organization brands the app.
-  const brandName = useBrandAppName();
-  const appName = brandName === "omnirush.ai" ? "OmniRush.ai" : brandName;
-  const update = useRequiredUpdate(gate);
-
-  useEffect(() => {
-    connectUpdateGate();
-  }, []);
-
-  // client_update on /device/me is authoritative: look again when the
-  // window comes back, so a gate the server lifted goes away.
-  useEffect(() => {
-    if (gate.status === "none") return;
-    window.addEventListener("focus", refreshUpdateGate);
-    return () => window.removeEventListener("focus", refreshUpdateGate);
-  }, [gate.status]);
-
-  const banner = gate.status === "required";
-  return (
-    <>
-      {banner ? <RequiredUpdateBanner gate={gate} appName={appName} update={update} /> : null}
-      <div
-        data-update-gate-shifted={banner ? "" : undefined}
-        style={bannerShiftStyle(banner)}
-      >
-        {children}
-      </div>
-      {gate.status === "blocked" ? <UpdateRequiredView gate={gate} appName={appName} update={update} /> : null}
-    </>
-  );
+  return <>{children}</>;
 }

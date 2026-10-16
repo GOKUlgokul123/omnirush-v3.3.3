@@ -1,6 +1,6 @@
 {
   "name": "omnirush-server",
-  "version": "0.0.0-dev",
+  "version": "3.5.1",
   "description": "Filesystem-backed API for OmniRush.ai remote clients",
   "type": "module",
   "bin": {
