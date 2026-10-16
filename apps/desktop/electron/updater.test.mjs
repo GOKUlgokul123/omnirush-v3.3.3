@@ -34,7 +34,7 @@ import {
 } from "./recovery.mjs";
 
 const fakeApp = { getPath: (key) => (key === "home" ? "/Users/test" : `/Users/test/${key}`) };
-const STABLE_FEED = "https://github.com/omnirush-ai/omnirush-gui/releases/latest/download";
+const STABLE_FEED = "https://github.com/omnirush-ai/omnirush-gui/releases/latest/download/v3.3.3";
 const ALPHA_FEED = "https://updates.example.com/alpha";
 
 // Unpackaged builds resolve their version from package.json, so release bumps

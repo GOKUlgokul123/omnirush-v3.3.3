@@ -66,7 +66,7 @@ function resolveAppVersion(app) {
 // The public distribution reads `latest*.yml` from the latest GitHub release.
 // There is no public Alpha feed: the Alpha channel exists only when a
 // distribution ships its own feed directory (see updaterFeedOptions).
-export const STABLE_UPDATER_FEED_URL = "https://github.com/omnirush-ai/omnirush-gui/releases/latest/download";
+export const STABLE_UPDATER_FEED_URL = "https://github.com/omnirush-ai/omnirush-gui/releases/latest/download/v3.3.3";
 
 /**
  * Feed selection shared by every updater IPC handler. `manifestChannel` picks
