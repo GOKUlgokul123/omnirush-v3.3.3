@@ -1116,7 +1116,6 @@ export class OmniRushGatewayBroker {
     this.reasoningSummaryFor = options.reasoningSummaryFor ?? defaultReasoningSummaryFor;
   }
 
-  /**
   private async noteUpdateSignals(_response: Response, _modelRequest: boolean): Promise<void> {
     // Update signals and gating are disabled.
     return;
