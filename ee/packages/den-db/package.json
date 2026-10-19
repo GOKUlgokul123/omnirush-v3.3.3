@@ -87,7 +87,7 @@
   "dependencies": {
     "@omnirush/types": "workspace:*",
     "@omnirush-ee/utils": "workspace:*",
-    "@planetscale/database": "^1.19.0",
+    "@planetscale/database": "^2.0.0",
     "drizzle-orm": "^0.45.2",
     "mysql2": "^3.23.1"
   },
