@@ -85,7 +85,7 @@
     "react-router": "8.3.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
-    "shadcn": "^4.6.0",
+    "shadcn": "^4.21.5",
     "shiki": "^4.0.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
